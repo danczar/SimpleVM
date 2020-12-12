@@ -16,6 +16,7 @@ class VirtualMachineViewModel: NSObject, ObservableObject, VZVirtualMachineDeleg
     @Published var kernelURL: URL?
     @Published var initialRamdiskURL: URL?
     @Published var bootableImageURL: URL?
+    @Published var persistentHarddiskURL: URL?
     
     @Published var state: VZVirtualMachine.State?
     
@@ -66,7 +67,8 @@ class VirtualMachineViewModel: NSObject, ObservableObject, VZVirtualMachineDeleg
     func start() {
         guard let kernelURL = kernelURL,
               let initialRamdiskURL = initialRamdiskURL,
-              let bootableImageURL = bootableImageURL else {
+              let bootableImageURL = bootableImageURL,
+              let persistentHarddiskURL = persistentHarddiskURL else {
             return
         }
         
@@ -88,18 +90,31 @@ class VirtualMachineViewModel: NSObject, ObservableObject, VZVirtualMachineDeleg
         
         let memoryBalloon = VZVirtioTraditionalMemoryBalloonDeviceConfiguration()
         
-        let blockAttachment: VZDiskImageStorageDeviceAttachment
+        let bootAttachment: VZDiskImageStorageDeviceAttachment
         
         do {
-            blockAttachment = try VZDiskImageStorageDeviceAttachment(
+            bootAttachment = try VZDiskImageStorageDeviceAttachment(
                 url: bootableImageURL,
                 readOnly: true
             )
         } catch {
-            NSLog("Failed to load bootableImage: \(error)")
+            NSLog("Failed to load bootable iso: \(error)")
             return
         }
         
+        let blockAttachment: VZDiskImageStorageDeviceAttachment
+        
+        do {
+            blockAttachment = try VZDiskImageStorageDeviceAttachment(
+                url: persistentHarddiskURL,
+                readOnly: false
+            )
+        } catch {
+            NSLog("Failed to load virtual disk image: \(error)")
+            return
+        }
+        
+        let bootableDevice = VZVirtioBlockDeviceConfiguration(attachment: bootAttachment)
         let blockDevice = VZVirtioBlockDeviceConfiguration(attachment: blockAttachment)
         
         let networkDevice = VZVirtioNetworkDeviceConfiguration()
@@ -107,8 +122,8 @@ class VirtualMachineViewModel: NSObject, ObservableObject, VZVirtualMachineDeleg
         
         let config = VZVirtualMachineConfiguration()
         config.bootLoader = bootloader
-        config.cpuCount = 4
-        config.memorySize = 2 * 1024 * 1024 * 1024
+        config.cpuCount = 8
+        config.memorySize = 8 * 1024 * 1024 * 1024
         config.entropyDevices = [entropy]
         config.memoryBalloonDevices = [memoryBalloon]
         config.serialPorts = [serial]
@@ -164,7 +179,7 @@ class VirtualMachineViewModel: NSObject, ObservableObject, VZVirtualMachineDeleg
     }
     
     func showConsole() {
-        consoleWindow.setContentSize(NSSize(width: 400, height: 300))
+        consoleWindow.setContentSize(NSSize(width: 1024, height: 768))
         consoleWindow.title = "Console"
         consoleWindowController.showWindow(nil)
     }

@@ -28,10 +28,17 @@ struct ContentView: View {
                     return true
                 }
             
-            Text("image: \(viewModel.bootableImageURL?.lastPathComponent ?? "(Drag to here)")")
+            Text("iso: \(viewModel.bootableImageURL?.lastPathComponent ?? "(Drag to here)")")
                 .padding([.top, .bottom])
                 .onDrop(of: [.fileURL], isTargeted: nil) { itemProviders -> Bool in
                     processDropItem(of: .image, items: itemProviders)
+                    return true
+                }
+            
+            Text("virtual disk (qcow2): \(viewModel.persistentHarddiskURL?.lastPathComponent ?? "(Drag to here)")")
+                .padding([.top, .bottom])
+                .onDrop(of: [.fileURL], isTargeted: nil) { itemProviders -> Bool in
+                    processDropItem(of: .harddisk, items: itemProviders)
                     return true
                 }
             
@@ -73,6 +80,7 @@ struct ContentView: View {
         case kernel
         case ramdisk
         case image
+        case harddisk
     }
     
     private func processDropItem(of type: DropItemType,
@@ -95,6 +103,8 @@ struct ContentView: View {
                     viewModel.initialRamdiskURL = url
                 case .image:
                     viewModel.bootableImageURL = url
+                case .harddisk:
+                    viewModel.persistentHarddiskURL = url
                 }
             }
         }
